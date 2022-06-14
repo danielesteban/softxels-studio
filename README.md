@@ -3,6 +3,10 @@ softxels-studio
 
 [![screenshot](public/screenshot.png)](https://softxels-studio.gatunes.com/)
 
+### Viewer
+
+You can drag & drop the BIN files over a [softxels-viewer](https://softxels-viewer.gatunes.com/) window or [build your own viewer](https://github.com/danielesteban/softxels-viewer).
+
 ### Dev environment
 
 ```bash
