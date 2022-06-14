@@ -135,7 +135,7 @@ class Studio extends Scene {
       .then(({ buffer }) => {
         this.buffer = buffer;
         world.importChunks(buffer.buffer);
-        world.updateChunks(world.localToWorld(_position.set(0, 0, 0)));
+        world.updateChunks(world.localToWorld(_position.set(0, 0, 0)), false);
         downloadViewer.disabled = downloadWorld.disabled =  generate.disabled = false;
       })
       .catch((e) => {
@@ -162,8 +162,18 @@ class Studio extends Scene {
       downloader.click();
       setTimeout(() => URL.revokeObjectURL(blob), 0);
     };
+    let output = buffer;
+    if (buffer.metadataNeedsUpdate) {
+      const metadata = (new TextEncoder()).encode(JSON.stringify(options.metadata));
+      const prev = 2 + (new Uint16Array(buffer.slice(0, 2)))[0];
+      const next = 2 + metadata.length;
+      output = new Uint8Array(buffer.length - prev + next);
+      output.set(new Uint8Array((new Uint16Array([metadata.length])).buffer), 0);
+      output.set(metadata, 2);
+      output.set(buffer.slice(prev), next);
+    }
     new Promise((resolve, reject) => {
-      deflate(buffer, (err, buffer) => {
+      deflate(output, (err, buffer) => {
         if (err) reject(err);
         else resolve(buffer);
       })
@@ -229,10 +239,8 @@ class Studio extends Scene {
       },
       pointcloud,
       spawn,
-      ui: { downloadViewer, downloadWorld },
       world,
     } = this;
-    downloadViewer.disabled = downloadWorld.disabled = true;
     pointcloud.rotation.set(MathUtils.degToRad(rotateX), MathUtils.degToRad(rotateY), MathUtils.degToRad(rotateZ));
     pointcloud.scale.setScalar(resolution * metadata.scale);
     pointcloud.updateMatrixWorld();
@@ -365,7 +373,12 @@ class Studio extends Scene {
       ['SpawnX', 0, this.options.metadata.spawn, 'float'],
       ['SpawnY', 1, this.options.metadata.spawn, 'float'],
       ['SpawnZ', 2, this.options.metadata.spawn, 'float'],
-    ], this.update.bind(this));
+    ], () => {
+      this.update();
+      if (this.buffer) {
+        this.buffer.metadataNeedsUpdate = true;
+      }
+    });
   
     form('Voxelizer', [
       ['Gain', 'gain', this.options, 'float'],
@@ -374,7 +387,10 @@ class Studio extends Scene {
       ['RotateX', 'rotateX', this.options],
       ['RotateY', 'rotateY', this.options],
       ['RotateZ', 'rotateZ', this.options],
-    ], this.update.bind(this));
+    ], () => {
+      this.update();
+      downloadViewer.disabled = downloadWorld.disabled = true;
+    });
 
     form('Visibility', [
       ['Pointcloud', 'visible', this.pointcloud, 'bool'],
