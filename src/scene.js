@@ -1,4 +1,4 @@
-import { deflate, Zip, ZipDeflate, Unzip, UnzipInflate } from 'fflate';
+import { deflate, Unzip, UnzipInflate, Zip, ZipDeflate, ZipPassThrough } from 'fflate';
 import {
   Box3,
   Box3Helper,
@@ -196,7 +196,7 @@ class Studio extends Scene {
                   file.start();
                 };
                 unzipper.push(new Uint8Array(viewer), true);
-                const world = new ZipDeflate('world.bin');
+                const world = new ZipPassThrough('world.bin');
                 zip.add(world);
                 world.push(buffer, true);
                 zip.end();
