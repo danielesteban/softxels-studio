@@ -358,6 +358,7 @@ class Studio extends Scene {
     downloader.style.display = 'none';
     ui.appendChild(downloader);
     const loader = document.createElement('input');
+    loader.accept = '.ply';
     loader.style.display = 'none';
     loader.type = 'file';
     loader.addEventListener('change', () => {
