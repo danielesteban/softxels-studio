@@ -13,6 +13,7 @@ import {
   Vector3,
 } from 'three';
 import World from 'softxels';
+import Grid from './grid.js';
 import Worker from 'web-worker:./worker.js';
 
 const _box = new Box3();
@@ -20,7 +21,7 @@ const _position = new Vector3();
 const _size = new Vector3();
 
 class Studio extends Scene {
-  constructor() {
+  constructor(camera) {
     super();
 
     this.options = {
@@ -37,6 +38,10 @@ class Studio extends Scene {
         version: '0.0.1',
       },
     };
+
+    camera.position.set(0, 8, 8);
+    this.grid = new Grid();
+    this.add(this.grid);
 
     this.pointcloud = new Points(new BufferGeometry(), new PointsMaterial({ vertexColors: true, size: this.options.metadata.scale }));
     this.pointcloud.frustumCulled = false;
@@ -214,6 +219,7 @@ class Studio extends Scene {
 
   update() {
     const {
+      grid,
       options: {
         metadata,
         resolution,
@@ -236,6 +242,8 @@ class Studio extends Scene {
     world.position.set(0, _size.y * -0.5, 0);
     world.scale.setScalar(metadata.scale);
     world.updateMatrixWorld();
+    grid.position.copy(world.position);
+    grid.material.uniforms.gridScale.value = metadata.scale;
     spawn.position.fromArray(this.options.metadata.spawn).add(world.position);
     spawn.visible = true;
   }

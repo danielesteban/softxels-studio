@@ -34,10 +34,9 @@ document.addEventListener('visibilitychange', () => {
   }
 }, false);
 
-camera.position.set(0, 0, 8);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-const scene = new Scene();
+const scene = new Scene(camera);
 
 renderer.setAnimationLoop(() => {
   const delta = Math.min(clock.getDelta(), 1);
