@@ -307,8 +307,12 @@ class Studio extends Scene {
           input.type = 'checkbox';
           input.checked = !!state[key];
         } else {
-          input.type = 'number';
-          input.step = type === 'float' ? 0.1 : 1;
+          if (type === 'text') {
+            input.type = 'text';
+          } else {
+            input.type = 'number';
+            input.step = type === 'float' ? 0.1 : 1;
+          }
           input.value = `${state[key] !== undefined ? state[key] : ''}`;
         }
         input.addEventListener('input', () => {
@@ -346,23 +350,22 @@ class Studio extends Scene {
     }, false);
     ui.appendChild(loader);
 
-    {
-      const heading = document.createElement('h1');
-      heading.innerText = 'softxels-studio';
-      ui.appendChild(heading);
-    }
-
-    form('Voxelizer options', [
-      ['Resolution', 'resolution', this.options],
+    form('Metadata', [
+      ['Author', 'author', this.options.metadata, 'text'],
+      ['Name', 'name', this.options.metadata, 'text'],
       ['Render scale', 'scale', this.options.metadata, 'float'],
-      ['RotateX', 'rotateX', this.options],
-      ['RotateY', 'rotateY', this.options],
-      ['RotateZ', 'rotateZ', this.options],
       ['SpawnX', 0, this.options.metadata.spawn, 'float'],
       ['SpawnY', 1, this.options.metadata.spawn, 'float'],
       ['SpawnZ', 2, this.options.metadata.spawn, 'float'],
+    ], this.update.bind(this));
+  
+    form('Voxelizer', [
       ['Gain', 'gain', this.options, 'float'],
       ['Grid', 'grid', this.options],
+      ['Resolution', 'resolution', this.options],
+      ['RotateX', 'rotateX', this.options],
+      ['RotateY', 'rotateY', this.options],
+      ['RotateZ', 'rotateZ', this.options],
     ], this.update.bind(this));
 
     form('Visibility', [

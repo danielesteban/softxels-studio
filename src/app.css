@@ -79,9 +79,6 @@ input[type="checkbox"] {
   box-sizing: border-box;
   padding: 1rem;
   width: 270px;
-  position: absolute;
-  bottom: 0;
-  left: 0;
   text-align: center;
   opacity: 0.2;
 }
@@ -137,16 +134,19 @@ input[type="checkbox"] {
   will-change: transform;
 }
 
-#ui {
+#sidebar {
   box-sizing: border-box;
   width: 270px;
   background-image: linear-gradient(to right, #222, #333);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
 }
 
-#ui > h1 {
+#sidebar > h1 {
   text-align: center;
-  margin: 0 0 1.5rem;
+  margin: 0;
   padding: 1rem 0;
   font-size: 1.5rem;
   background-color: #111;
