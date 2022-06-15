@@ -48,7 +48,7 @@ class Studio extends Scene {
     this.pointcloud.geometry.computeBoundingBox();
     this.add(this.pointcloud);
 
-    this.world = new World({ chunkMaterial: new MeshBasicMaterial({ vertexColors: true }), renderRadius: 10 });
+    this.world = new World({ chunkMaterial: new MeshBasicMaterial({ vertexColors: true }) });
     this.add(this.world);
 
     this.spawn = new Group();
@@ -136,8 +136,7 @@ class Studio extends Scene {
     })
       .then(({ buffer }) => {
         this.buffer = buffer;
-        world.importChunks(buffer.buffer);
-        world.updateChunks(world.localToWorld(_position.set(0, 0, 0)), false);
+        world.importChunks(buffer.buffer, true, false);
         downloadViewer.disabled = downloadWorld.disabled = publish.disabled = false;
       })
       .catch((e) => {
