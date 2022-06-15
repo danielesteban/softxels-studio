@@ -59,5 +59,3 @@ renderer.setAnimationLoop(() => {
     fps.count = 0;
   }
 });
-
-window.addEventListener('contextmenu', (e) => e.preventDefault(), false);
