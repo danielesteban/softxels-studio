@@ -20,7 +20,7 @@ const _box = new Box3();
 const _size = new Vector3();
 
 class Studio extends Scene {
-  constructor(camera) {
+  constructor({ camera, controls }) {
     super();
 
     this.options = {
@@ -38,7 +38,9 @@ class Studio extends Scene {
       },
     };
 
-    camera.position.set(0, 8, 8);
+    camera.position.set(0, 16, 8);
+    controls.orbit.target.set(0, 8, 0);
+
     this.grid = new Grid();
     this.add(this.grid);
 
@@ -53,8 +55,12 @@ class Studio extends Scene {
 
     this.spawn = new Group();
     this.spawn.add(new Box3Helper((new Box3()).setFromCenterAndSize(new Vector3(0, 1, 0), new Vector3(0.5, 2, 0.5)), 0x339933));
-    this.spawn.visible = false;
+    this.spawn.position.fromArray(this.options.metadata.spawn);
+    this.spawn.transform = controls.transform;
     this.add(this.spawn);
+    controls.transform.attach(this.spawn);
+    controls.transform.addEventListener('objectChange', () => this.ui.updateSpawn());
+    this.add(controls.transform);
 
     this.worker = new Worker();
     let requestId = 0;
@@ -266,7 +272,6 @@ class Studio extends Scene {
     _box.getSize(_size);
     pointcloud.position.set(0, _size.y * 0.5, 0);
     spawn.position.fromArray(this.options.metadata.spawn);
-    spawn.visible = true;
     world.scale.setScalar(metadata.scale);
     world.updateMatrixWorld();
   }
@@ -354,7 +359,8 @@ class Studio extends Scene {
       ui.appendChild(h4);
       const div = document.createElement('div');
       div.className = 'actions';
-      const buttons = actions.map(([name, onClick]) => {
+      ui.appendChild(div);
+      return actions.map(([name, onClick]) => {
         const button = document.createElement('button');
         button.disabled = true;
         button.innerText = name;
@@ -362,8 +368,6 @@ class Studio extends Scene {
         div.appendChild(button);
         return button;
       });
-      ui.appendChild(div);
-      return buttons;
     };
 
     const form = (title, inputs, onChange) => {
@@ -372,7 +376,8 @@ class Studio extends Scene {
       ui.appendChild(h4);
       const form = document.createElement('div');
       form.className = 'form';
-      inputs.forEach(([name, key, state, type]) => {
+      ui.appendChild(form);
+      return inputs.map(([name, key, state, type]) => {
         const div = document.createElement('div');
         const label = document.createElement('label');
         const input = document.createElement('input');
@@ -387,7 +392,7 @@ class Studio extends Scene {
             input.type = 'text';
           } else {
             input.type = 'number';
-            input.step = type === 'float' ? 0.1 : 1;
+            input.step = type === 'float' ? 0.01 : 1;
           }
           input.value = `${state[key] !== undefined ? state[key] : ''}`;
         }
@@ -410,8 +415,8 @@ class Studio extends Scene {
           }
         }, false);
         form.appendChild(div);
+        return input;
       });
-      ui.appendChild(form);
     };
 
     const downloader = document.createElement('a');
@@ -433,21 +438,23 @@ class Studio extends Scene {
     ]);
     load.disabled = false;
 
-    form('Metadata', [
-      ['Author', 'author', this.options.metadata, 'text'],
-      ['Name', 'name', this.options.metadata, 'text'],
-      ['Render scale', 'scale', this.options.metadata, 'float'],
-      ['SpawnX', 0, this.options.metadata.spawn, 'float'],
-      ['SpawnY', 1, this.options.metadata.spawn, 'float'],
-      ['SpawnZ', 2, this.options.metadata.spawn, 'float'],
-    ], () => {
+    const updateMetadata = () => {
       this.update();
       if (this.buffer) {
         this.buffer.metadataNeedsUpdate = true;
         publish.disabled = false;
         viewer.disabled = true;
       }
-    });
+    };
+
+    const [/*auhtor*/, /*name*/, /*scale*/, spawnX, spawnY, spawnZ] = form('Metadata', [
+      ['Author', 'author', this.options.metadata, 'text'],
+      ['Name', 'name', this.options.metadata, 'text'],
+      ['Render scale', 'scale', this.options.metadata, 'float'],
+      ['SpawnX', 0, this.options.metadata.spawn, 'float'],
+      ['SpawnY', 1, this.options.metadata.spawn, 'float'],
+      ['SpawnZ', 2, this.options.metadata.spawn, 'float'],
+    ], updateMetadata);
   
     form('Voxelizer', [
       ['Gain', 'gain', this.options, 'float'],
@@ -475,7 +482,10 @@ class Studio extends Scene {
     form('Visibility', [
       ['Pointcloud', 'visible', this.pointcloud, 'bool'],
       ['Softxels', 'visible', this.world, 'bool'],
-    ]);
+      ['Spawn', 'visible', this.spawn, 'bool'],
+    ], () => {
+      this.spawn.transform.visible = this.spawn.visible;
+    });
 
     this.ui = {
       loading: document.getElementById('loading'),
@@ -485,6 +495,16 @@ class Studio extends Scene {
       generate,
       publish,
       viewer,
+      updateSpawn: () => {
+        const { position } = this.spawn;
+        this.options.metadata.spawn[0] = position.x;
+        this.options.metadata.spawn[1] = position.y;
+        this.options.metadata.spawn[2] = position.z;
+        spawnX.value = position.x.toLocaleString();
+        spawnY.value = position.y.toLocaleString();
+        spawnZ.value = position.z.toLocaleString();
+        updateMetadata();
+      },
     };
   }
 }

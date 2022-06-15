@@ -5,6 +5,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import Scene from './scene.js';
 import './app.css';
 
@@ -34,14 +35,21 @@ document.addEventListener('visibilitychange', () => {
   }
 }, false);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-const scene = new Scene(camera);
+const controls = {
+  orbit: new OrbitControls(camera, renderer.domElement),
+  transform: new TransformControls(camera, renderer.domElement),
+};
+controls.orbit.enableDamping = true;
+controls.transform.setSize(0.5);
+controls.transform.setTranslationSnap(0.01);
+controls.transform.addEventListener('dragging-changed', ({ value }) => { controls.orbit.enabled = !value; });
+
+const scene = new Scene({ camera, controls });
 
 renderer.setAnimationLoop(() => {
   const delta = Math.min(clock.getDelta(), 1);
   const time = clock.oldTime / 1000;
-  controls.update(delta);
+  controls.orbit.update(delta);
   renderer.render(scene, camera);
   fps.count += 1;
   if (time >= fps.lastTick + 1) {
