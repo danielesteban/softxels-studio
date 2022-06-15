@@ -142,11 +142,12 @@ input[type="checkbox"] {
 #sidebar {
   box-sizing: border-box;
   width: 270px;
+  min-height: 0;
   background-image: linear-gradient(to right, #222, #333);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
 }
 
 #sidebar > h1 {
@@ -156,6 +157,13 @@ input[type="checkbox"] {
   font-size: 1.5rem;
   background-color: #111;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+#sidebar > div {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+  overflow-y: overlay;
 }
 
 #ui > h4 {
@@ -233,4 +241,22 @@ input[type="checkbox"] {
   border-style: dotted;
   border-color: #fff;
   border-color: rgba(255, 255, 255, 0.7);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+::-webkit-scrollbar:hover {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+::-webkit-scrollbar-thumb:vertical {
+  background: #444;
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:vertical:active {
+  background: #555;
 }
