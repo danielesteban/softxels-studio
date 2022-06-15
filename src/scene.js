@@ -17,7 +17,6 @@ import Grid from './grid.js';
 import Worker from 'web-worker:./worker.js';
 
 const _box = new Box3();
-const _position = new Vector3();
 const _size = new Vector3();
 
 class Studio extends Scene {
@@ -43,7 +42,7 @@ class Studio extends Scene {
     this.grid = new Grid();
     this.add(this.grid);
 
-    this.pointcloud = new Points(new BufferGeometry(), new PointsMaterial({ vertexColors: true, size: this.options.metadata.scale }));
+    this.pointcloud = new Points(new BufferGeometry(), new PointsMaterial({ vertexColors: true }));
     this.pointcloud.frustumCulled = false;
     this.pointcloud.geometry.computeBoundingBox();
     this.add(this.pointcloud);
@@ -255,6 +254,7 @@ class Studio extends Scene {
       spawn,
       world,
     } = this;
+    pointcloud.material.size = metadata.scale;
     pointcloud.rotation.set(MathUtils.degToRad(rotateX), MathUtils.degToRad(rotateY), MathUtils.degToRad(rotateZ));
     pointcloud.scale.setScalar(resolution * metadata.scale);
     pointcloud.updateMatrixWorld();
