@@ -231,7 +231,7 @@ class Studio extends Scene {
         ipfs.add({ path: `${(options.metadata.name || 'world')}.bin`, content: output })
       ))
       .then((file) => {
-        target.disabled = viewer.disabled = false;
+        viewer.disabled = false;
         this.cid = `${file.cid}`;
       })
       .catch((e) => {
@@ -444,6 +444,8 @@ class Studio extends Scene {
       this.update();
       if (this.buffer) {
         this.buffer.metadataNeedsUpdate = true;
+        publish.disabled = false;
+        viewer.disabled = true;
       }
     });
   
@@ -457,7 +459,7 @@ class Studio extends Scene {
     ], () => {
       this.update();
       generate.disabled = !this.pointcloud.hasLoaded;
-      downloadViewer.disabled = downloadWorld.disabled = publish.disabled = true;
+      downloadViewer.disabled = downloadWorld.disabled = publish.disabled = viewer.disabled = true;
     });
 
     const [downloadWorld, downloadViewer] = actions('Download', [
