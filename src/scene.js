@@ -83,11 +83,12 @@ class Studio extends Scene {
   }
 
   load(file) {
-    const { pointcloud, ui: { loading, downloadViewer, downloadWorld, generate }, world, worker } = this;
+    const { pointcloud, ui: { loading, downloadViewer, downloadWorld, generate, publish }, world, worker } = this;
     world.reset();
     delete this.buffer;
+    pointcloud.hasLoaded = false;
     loading.classList.add('enabled');
-    downloadViewer.disabled = downloadWorld.disabled = generate.disabled =  true;
+    downloadViewer.disabled = downloadWorld.disabled = generate.disabled = publish.disabled = true;
     new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
@@ -102,6 +103,7 @@ class Studio extends Scene {
         pointcloud.geometry.setAttribute('color', new BufferAttribute(color, 3));
         pointcloud.geometry.setAttribute('position', new BufferAttribute(position, 3));
         pointcloud.geometry.computeBoundingBox();
+        pointcloud.hasLoaded = true;
         this.update();
       })
       .catch((e) => {
@@ -116,14 +118,14 @@ class Studio extends Scene {
     const {
       options,
       pointcloud: { geometry },
-      ui: { loading, generate, downloadViewer, downloadWorld },
+      ui: { loading, generate, downloadViewer, downloadWorld, publish },
       world,
       worker,
     } = this;
     world.reset();
     delete this.buffer;
     loading.classList.add('enabled');
-    downloadViewer.disabled = downloadWorld.disabled = generate.disabled = true;
+    downloadViewer.disabled = downloadWorld.disabled = generate.disabled = publish.disabled = true;
     worker.request({
       operation: 'generate',
       geometry: {
@@ -136,7 +138,7 @@ class Studio extends Scene {
         this.buffer = buffer;
         world.importChunks(buffer.buffer);
         world.updateChunks(world.localToWorld(_position.set(0, 0, 0)), false);
-        downloadViewer.disabled = downloadWorld.disabled =  generate.disabled = false;
+        downloadViewer.disabled = downloadWorld.disabled = publish.disabled = false;
       })
       .catch((e) => {
         console.error(e);
@@ -148,9 +150,8 @@ class Studio extends Scene {
 
   download({ target }) {
     const {
-      buffer,
       options,
-      ui: { downloader, downloadViewer, downloadWorld },
+      ui: { loading, downloader, downloadViewer, downloadWorld },
     } = this;
     loading.classList.add('enabled');
     target.disabled = true;
@@ -162,62 +163,76 @@ class Studio extends Scene {
       downloader.click();
       setTimeout(() => URL.revokeObjectURL(blob), 0);
     };
-    let output = buffer;
-    if (buffer.metadataNeedsUpdate) {
-      const metadata = (new TextEncoder()).encode(JSON.stringify(options.metadata));
-      const prev = 2 + (new Uint16Array(buffer.slice(0, 2)))[0];
-      const next = 2 + metadata.length;
-      output = new Uint8Array(buffer.length - prev + next);
-      output.set(new Uint8Array((new Uint16Array([metadata.length])).buffer), 0);
-      output.set(metadata, 2);
-      output.set(buffer.slice(prev), next);
-    }
-    new Promise((resolve, reject) => {
-      deflate(output, (err, buffer) => {
-        if (err) reject(err);
-        else resolve(buffer);
-      })
-    })
-      .then((buffer) => {
+    Promise.all([
+      this.getOutput(),
+      ...(target === downloadViewer ? [this.getViewer()] : []),
+    ])
+      .then(([output, viewer]) => {
         switch (target) {
           case downloadWorld:
-            return download([buffer], 'bin');
+            return download([output], 'bin');
           case downloadViewer:
-            return this.getViewer()
-              .then((viewer) => new Promise((resolve, reject) => {
-                const buffers = [];
-                const zip = new Zip((err, data, final) => {
+            return (new Promise((resolve, reject) => {
+              const buffers = [];
+              const zip = new Zip((err, data, final) => {
+                if (err) {
+                  reject(err);
+                  return;
+                }
+                buffers.push(data.buffer);
+                if (final) {
+                  resolve(buffers);
+                }
+              });
+              const unzipper = new Unzip();
+              unzipper.register(UnzipInflate);
+              unzipper.onfile = (file) => {
+                const copy = new ZipDeflate(file.name);
+                zip.add(copy);
+                file.ondata = (err, data, final) => {
                   if (err) {
                     reject(err);
                     return;
                   }
-                  buffers.push(data.buffer);
-                  if (final) {
-                    resolve(buffers);
-                  }
-                });
-                const unzipper = new Unzip();
-                unzipper.register(UnzipInflate);
-                unzipper.onfile = (file) => {
-                  const copy = new ZipDeflate(file.name);
-                  zip.add(copy);
-                  file.ondata = (err, data, final) => {
-                    if (err) {
-                      reject(err);
-                      return;
-                    }
-                    copy.push(data, final);
-                  };
-                  file.start();
+                  copy.push(data, final);
                 };
-                unzipper.push(new Uint8Array(viewer), true);
-                const world = new ZipPassThrough('world.bin');
-                zip.add(world);
-                world.push(buffer, true);
-                zip.end();
-              }))
-              .then((buffers) => download(buffers, 'zip'));
+                file.start();
+              };
+              unzipper.push(new Uint8Array(viewer), true);
+              const world = new ZipPassThrough('world.bin');
+              zip.add(world);
+              world.push(output, true);
+              zip.end();
+            }))
+            .then((buffers) => download(buffers, 'zip'));
         }
+      })
+      .catch((e) => {
+        console.error(e);
+      })
+      .finally(() => {
+        loading.classList.remove('enabled');
+      });
+  }
+
+  publish({ target }) {
+    const {
+      options,
+      ui: { loading, viewer },
+    } = this;
+    delete this.cid;
+    loading.classList.add('enabled');
+    target.disabled = viewer.disabled = true;
+    Promise.all([
+      this.getIPFS(),
+      this.getOutput(),
+    ])
+      .then(([ipfs, output]) => (
+        ipfs.add({ path: `${(options.metadata.name || 'world')}.bin`, content: output })
+      ))
+      .then((file) => {
+        target.disabled = viewer.disabled = false;
+        this.cid = `${file.cid}`;
       })
       .catch((e) => {
         console.error(e);
@@ -254,6 +269,51 @@ class Studio extends Scene {
     grid.material.uniforms.gridScale.value = metadata.scale;
     spawn.position.fromArray(this.options.metadata.spawn).add(world.position);
     spawn.visible = true;
+  }
+
+  getIPFS() {
+    if (this.ipfs) {
+      return Promise.resolve(this.ipfs);
+    }
+    return (new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.onload = resolve;
+      script.onerror = reject;
+      script.src = 'https://cdn.jsdelivr.net/npm/ipfs-core@0.15.2/dist/index.min.js';
+      document.head.appendChild(script);
+    }))
+      .then(() => window.IpfsCore.create({
+        repo: String(Math.random() + Date.now()),
+        init: { alogorithm: 'ed25519' }
+      }))
+      .then((node) => {
+        this.ipfs = node;
+        return node;
+      });
+  }
+
+  getOutput() {
+    const {
+      buffer,
+      options,
+    } = this;
+    let output = buffer;
+    if (buffer.metadataNeedsUpdate) {
+      const metadata = (new TextEncoder()).encode(JSON.stringify(options.metadata));
+      const prev = 2 + (new Uint16Array(buffer.slice(0, 2)))[0];
+      const next = 2 + metadata.length;
+      output = new Uint8Array(buffer.length - prev + next);
+      output.set(new Uint8Array((new Uint16Array([metadata.length])).buffer), 0);
+      output.set(metadata, 2);
+      output.set(buffer.slice(prev), next);
+    }
+    return new Promise((resolve, reject) => {
+      deflate(output, (err, buffer) => {
+        if (err) reject(err);
+        else resolve(buffer);
+      })
+    });
   }
 
   getViewer() {
@@ -367,6 +427,12 @@ class Studio extends Scene {
     }, false);
     ui.appendChild(loader);
 
+    const [load, generate] = actions('Pointcloud', [
+      ['Load (.PLY)', () => loader.click()],
+      ['Voxelize', this.generate.bind(this)],
+    ]);
+    load.disabled = false;
+
     form('Metadata', [
       ['Author', 'author', this.options.metadata, 'text'],
       ['Name', 'name', this.options.metadata, 'text'],
@@ -390,23 +456,23 @@ class Studio extends Scene {
       ['RotateZ', 'rotateZ', this.options],
     ], () => {
       this.update();
-      downloadViewer.disabled = downloadWorld.disabled = true;
+      generate.disabled = !this.pointcloud.hasLoaded;
+      downloadViewer.disabled = downloadWorld.disabled = publish.disabled = true;
     });
 
+    const [downloadWorld, downloadViewer] = actions('Download', [
+      ['World (.BIN)', this.download.bind(this)],
+      ['Viewer (.ZIP)', this.download.bind(this)],
+    ]);
+
+    const [publish, viewer] = actions('IPFS', [
+      ['Publish', this.publish.bind(this)],
+      ['Open viewer', () => window.open(`https://softxels-viewer.gatunes.com/#/ipfs:${this.cid}`)],
+    ]);
+    
     form('Visibility', [
       ['Pointcloud', 'visible', this.pointcloud, 'bool'],
       ['Softxels', 'visible', this.world, 'bool'],
-    ]);
-
-    const [load, generate] = actions('Operations', [
-      ['Load', () => loader.click()],
-      ['Generate', this.generate.bind(this)],
-    ]);
-    load.disabled = false;
-
-    const [downloadWorld, downloadViewer] = actions('Download', [
-      ['World (.BIN)',this.download.bind(this)],
-      ['Viewer (.ZIP)', this.download.bind(this)],
     ]);
 
     this.ui = {
@@ -415,6 +481,8 @@ class Studio extends Scene {
       downloadViewer,
       downloadWorld,
       generate,
+      publish,
+      viewer,
     };
   }
 }
