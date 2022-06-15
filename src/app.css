@@ -40,6 +40,7 @@ button:active {
 button:disabled {
   background: #666;
   color: #aaa;
+  cursor: default;
   opacity: 0.3;
 }
 
@@ -53,7 +54,6 @@ input[type="number"], input[type="text"] {
   color: #fff;
   border: 0;
   outline: 0;
-  cursor: inherit;
   font-family: inherit;
   font-size: inherit;
   border-radius: 4px;
@@ -63,6 +63,7 @@ input[type="number"], input[type="text"] {
 
 input[type="checkbox"] {
   accent-color: #393;
+  cursor: pointer;
 }
 
 #debug {
