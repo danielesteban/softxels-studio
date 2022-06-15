@@ -56,10 +56,10 @@ class Studio extends Scene {
     this.spawn = new Group();
     this.spawn.add(new Box3Helper((new Box3()).setFromCenterAndSize(new Vector3(0, 1, 0), new Vector3(0.5, 2, 0.5)), 0x339933));
     this.spawn.position.fromArray(this.options.metadata.spawn);
-    this.spawn.transform = controls.transform;
     this.add(this.spawn);
+
     controls.transform.attach(this.spawn);
-    controls.transform.addEventListener('objectChange', () => this.ui.updateSpawn());
+    this.spawn.transform = controls.transform;
     this.add(controls.transform);
 
     this.worker = new Worker();
@@ -456,6 +456,17 @@ class Studio extends Scene {
       ['SpawnZ', 2, this.options.metadata.spawn, 'float'],
     ], updateMetadata);
   
+    this.spawn.transform.addEventListener('objectChange', () => {
+      const { position } = this.spawn;
+      this.options.metadata.spawn[0] = position.x;
+      this.options.metadata.spawn[1] = position.y;
+      this.options.metadata.spawn[2] = position.z;
+      spawnX.value = position.x.toLocaleString();
+      spawnY.value = position.y.toLocaleString();
+      spawnZ.value = position.z.toLocaleString();
+      updateMetadata();
+    });
+
     form('Voxelizer', [
       ['Gain', 'gain', this.options, 'float'],
       ['Grid', 'grid', this.options],
@@ -495,16 +506,6 @@ class Studio extends Scene {
       generate,
       publish,
       viewer,
-      updateSpawn: () => {
-        const { position } = this.spawn;
-        this.options.metadata.spawn[0] = position.x;
-        this.options.metadata.spawn[1] = position.y;
-        this.options.metadata.spawn[2] = position.z;
-        spawnX.value = position.x.toLocaleString();
-        spawnY.value = position.y.toLocaleString();
-        spawnZ.value = position.z.toLocaleString();
-        updateMetadata();
-      },
     };
   }
 }
