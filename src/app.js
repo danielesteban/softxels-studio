@@ -9,7 +9,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import Scene from './scene.js';
 import './app.css';
 
-const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new PerspectiveCamera(75, (window.innerWidth - 270) / window.innerHeight, 0.1, 1000);
 const clock = new Clock();
 const fps = {
   dom: document.getElementById('fps'),
