@@ -25,6 +25,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(width, window.innerHeight);
   camera.aspect = width / window.innerHeight;
   camera.updateProjectionMatrix();
+  renderer.needsUpdate = true;
 }, false);
 document.addEventListener('visibilitychange', () => {
   const isVisible = document.visibilityState === 'visible';
@@ -39,18 +40,23 @@ const controls = {
   orbit: new OrbitControls(camera, renderer.domElement),
   transform: new TransformControls(camera, renderer.domElement),
 };
+controls.orbit.addEventListener('change', () => { renderer.needsUpdate = true; });
 controls.orbit.enableDamping = true;
+controls.transform.addEventListener('change', () => { renderer.needsUpdate = true; });
 controls.transform.setSize(0.5);
 controls.transform.setTranslationSnap(0.01);
 controls.transform.addEventListener('dragging-changed', ({ value }) => { controls.orbit.enabled = !value; });
 
-const scene = new Scene({ camera, controls });
+const scene = new Scene({ camera, controls, renderer });
 
 renderer.setAnimationLoop(() => {
   const delta = Math.min(clock.getDelta(), 1);
   const time = clock.oldTime / 1000;
   controls.orbit.update(delta);
-  renderer.render(scene, camera);
+  if (renderer.needsUpdate) {
+    renderer.needsUpdate = false;
+    renderer.render(scene, camera);
+  }
   fps.count += 1;
   if (time >= fps.lastTick + 1) {
     const count = Math.round(fps.count / (time - fps.lastTick));

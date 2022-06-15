@@ -20,7 +20,7 @@ const _box = new Box3();
 const _size = new Vector3();
 
 class Studio extends Scene {
-  constructor({ camera, controls }) {
+  constructor({ camera, controls, renderer }) {
     super();
 
     this.options = {
@@ -40,6 +40,7 @@ class Studio extends Scene {
 
     camera.position.set(0, 16, 8);
     controls.orbit.target.set(0, 8, 0);
+    this.renderer = renderer;
 
     this.grid = new Grid();
     this.add(this.grid);
@@ -51,6 +52,7 @@ class Studio extends Scene {
     this.add(this.pointcloud);
 
     this.world = new World({ chunkMaterial: new MeshBasicMaterial({ vertexColors: true }) });
+    this.world.addEventListener('update', () => { this.renderer.needsUpdate = true; });
     this.add(this.world);
 
     this.spawn = new Group();
@@ -258,6 +260,7 @@ class Studio extends Scene {
         rotateZ
       },
       pointcloud,
+      renderer,
       spawn,
       world,
     } = this;
@@ -274,6 +277,7 @@ class Studio extends Scene {
     spawn.position.fromArray(this.options.metadata.spawn);
     world.scale.setScalar(metadata.scale);
     world.updateMatrixWorld();
+    renderer.needsUpdate = true;
   }
 
   getIPFS() {
@@ -476,6 +480,7 @@ class Studio extends Scene {
       ['RotateZ', 'rotateZ', this.options],
     ], () => {
       this.update();
+      this.world.reset();
       generate.disabled = !this.pointcloud.hasLoaded;
       downloadViewer.disabled = downloadWorld.disabled = publish.disabled = viewer.disabled = true;
     });
@@ -496,6 +501,7 @@ class Studio extends Scene {
       ['Spawn', 'visible', this.spawn, 'bool'],
     ], () => {
       this.spawn.transform.visible = this.spawn.visible;
+      this.renderer.needsUpdate = true;
     });
 
     this.ui = {

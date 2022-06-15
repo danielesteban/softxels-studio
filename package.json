@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "fflate": "^0.7.3",
-    "softxels": "^0.0.49",
+    "softxels": "^0.0.50",
     "softxels-voxelizer": "^0.0.13",
     "three": "^0.141.0"
   },
