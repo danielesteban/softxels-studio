@@ -45,6 +45,7 @@ class Studio extends Scene {
     this.pointcloud = new Points(new BufferGeometry(), new PointsMaterial({ vertexColors: true }));
     this.pointcloud.frustumCulled = false;
     this.pointcloud.geometry.computeBoundingBox();
+    this.pointcloud.geometry.computeBoundingSphere();
     this.add(this.pointcloud);
 
     this.world = new World({ chunkMaterial: new MeshBasicMaterial({ vertexColors: true }) });
@@ -254,20 +255,20 @@ class Studio extends Scene {
       spawn,
       world,
     } = this;
+    grid.material.uniforms.gridScale.value = metadata.scale;
     pointcloud.material.size = metadata.scale;
+    pointcloud.position.set(0, 0, 0);
     pointcloud.rotation.set(MathUtils.degToRad(rotateX), MathUtils.degToRad(rotateY), MathUtils.degToRad(rotateZ));
     pointcloud.scale.setScalar(resolution * metadata.scale);
     pointcloud.updateMatrixWorld();
     _box.copy(pointcloud.geometry.boundingBox);
     _box.applyMatrix4(pointcloud.matrixWorld);
     _box.getSize(_size);
-    world.position.set(0, _size.y * -0.5, 0);
+    pointcloud.position.set(0, _size.y * 0.5, 0);
+    spawn.position.fromArray(this.options.metadata.spawn);
+    spawn.visible = true;
     world.scale.setScalar(metadata.scale);
     world.updateMatrixWorld();
-    grid.position.copy(world.position);
-    grid.material.uniforms.gridScale.value = metadata.scale;
-    spawn.position.fromArray(this.options.metadata.spawn).add(world.position);
-    spawn.visible = true;
   }
 
   getIPFS() {
